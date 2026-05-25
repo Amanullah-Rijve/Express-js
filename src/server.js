@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from "dotenv";
 import router from './routes/products.routes.js';
+import router2 from './routes/studentsData.js';
 
 dotenv.config();
 
@@ -11,6 +12,7 @@ app.use(express.json());
 
 // routes
 app.use('/api/products',router);
+app.use('/api/students/',router2);
 
 // base router
 app.get('/',(req,res)=>{

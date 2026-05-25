@@ -23,7 +23,7 @@ router.get("/:id",(req,res)=>{
     const product = products.find(p => p.id ===id);
 
     if(!product){
-        res.status(404).json({
+       return res.status(404).json({
             success: false,
             message: 'Product not found'
         });
@@ -88,7 +88,7 @@ router.put("/:id",(req,res)=>{
 // use of patch / partially update
 router.patch('/:id',(req,res)=>{
     const id = parseInt(req.params.id);
-    const index = products.findLastIndex(p => p.id===id);
+    const index = products.findIndex(p => p.id===id);
 
     // validation
     if(index === -1){
@@ -109,7 +109,7 @@ router.patch('/:id',(req,res)=>{
 // delete product
 router.delete('/:id',(req,res)=>{
     const id = parseInt(req.params.body);
-    const index = products.findLastIndex(p=> p.id===id);
+    const index = products.findIndex(p=> p.id===id);
 
     if(index===-1){
         return res.status(404).json({
