@@ -1,6 +1,41 @@
 import {Router } from "express";
 
 const router2= Router();
+// router level middleware
+router2.use((req,res,next)=>{
+    console.log(`Student Router: ${req.method} ${req.url}`);
+    next();
+});
+
+// reuseable middleware
+// student exsists?
+const findStudent = (req,res,next)=>{
+    const id = parseInt(req.params.id);
+    const student = students.find(s => s.id===id);
+
+    if(!student){
+        return res.status(404).json({
+            success: false,
+            message:'student not found'
+        });
+    };
+    // keep student req
+    req.student=student;
+};
+
+// valid department check
+const checkDep = (req,res,next)=>{
+    const validDep = ["CSE","EEE","BBA","SWE"];
+    const {department}= req.body;
+
+    if(department && !validDep.includes(department)){
+        return res.status(404).json({
+            success: false,
+            message: `Department must be: ${validDepts.join(', ')}`
+        });
+    };
+    next();
+};
 
 // Temp Data
 let students = [
