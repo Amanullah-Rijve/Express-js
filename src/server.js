@@ -2,13 +2,15 @@ import express from 'express';
 import dotenv from "dotenv";
 import router from './routes/products.routes.js';
 import router2 from './routes/studentsData.js';
+import { logger,notFound,errorHndeling } from './middleware/logger.middleware.js';
 
 dotenv.config();
 
 const app = express();
 
 // json will read data
-app.use(express.json());
+app.use(express.json({limit:'10kb'}));
+app.use(logger);
 
 // routes
 app.use('/api/products',router);
@@ -34,6 +36,8 @@ app.use((res=>{
     });
 }));
 
+app.use(notFound);
+app.use(errorHndeling);
 // server star
 const PORT = process.env.PORT || 3000;
 app.listen(PORT,()=>{
