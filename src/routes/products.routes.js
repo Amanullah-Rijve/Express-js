@@ -2,6 +2,42 @@ import {Router} from 'express';
 
 const router = Router();
 
+// dynamic route level middleware
+router.use((req,res,next)=>{
+    console.log(`product Router: ${req.method} ${req.url}`);
+    next();
+})
+
+// product exsist middleware
+const fundProduct=(req,res,next)=>{
+    const id = parseInt(req.params.id);
+    const product = products.find(p=>p.id===id);
+
+    if(!product){
+        return res.status(404).json({
+            success:false,
+            message: 'product not found'
+        });
+    };
+
+    req.product = product;
+    next();
+};
+
+// valid product name check
+const chechProduct = (req,res,next)=>{
+    const validName = ['Laptop','Mouse','Keyboard'];
+    const {name}= req.body;
+
+    if(name && !validName.includes(validName)){
+        return res.status(400).json({
+            success:false,
+            message: 'enter valid name'
+        });
+    };
+    next();
+};
+
 // temporary data
 let products = [
     { id: 1, name: 'Laptop', price: 75000, stock: 10 },
