@@ -1,164 +1,161 @@
 import {Router} from 'express';
+import pool from '../config/db.js';
 
 const router = Router();
 
-// dynamic route level middleware
-router.use((req,res,next)=>{
-    console.log(`product Router: ${req.method} ${req.url}`);
-    next();
-})
+// Midleware
+const findProduct = async (req,res,next)=>{
+    try {
+        const[rows]=await pool.query(
+            'SELECT * FROM products WHERE id=?',
+            [req.params.id]
+        );
 
-// product exsist middleware
-const fundProduct=(req,res,next)=>{
-    const id = parseInt(req.params.id);
-    const product = products.find(p=>p.id===id);
-
-    if(!product){
-        return res.status(404).json({
-            success:false,
-            message: 'product not found'
-        });
+        if(rows.length===0){
+            return res.status(404).json({
+                success:false,
+                message:'product not found'
+            });
+        }
+        req.product=rows[0];
+        next();
+    } catch (error) {
+        next(error);
     };
-
-    req.product = product;
-    next();
 };
 
-// valid product name check
-const chechProduct = (req,res,next)=>{
-    const validName = ['Laptop','Mouse','Keyboard'];
-    const {name}= req.body;
-
-    if(name && !validName.includes(validName)){
-        return res.status(400).json({
-            success:false,
-            message: 'enter valid name'
+// Routes -----------
+// ------ GET All product
+router.get('/',async(req,res,next)=>{
+    try {
+        const [rows]= await pool.query(
+            'SELECT * FROM products ORDER BY created_at DESC'
+        );
+        res.status(200).json({
+            success: true,
+            count: rows.length,
+            data:rows
         });
-    };
-    next();
-};
+    } catch (error) {
+        next(error);
+    }
+});
 
-// temporary data
-let products = [
-    { id: 1, name: 'Laptop', price: 75000, stock: 10 },
-    { id: 2, name: 'Mouse', price: 1500, stock: 50 },
-    { id: 3, name: 'Keyboard', price: 3000, stock: 30 },
-];
-
-// get products
-router.get("/",(req,res)=>{
+// GET product by id
+router.get('/:id',findProduct,(req,res,next)=>{
     res.status(200).json({
         success: true,
-        count: products.length,
-        data: products
+        data: req.product
     });
 });
-// get product by id
-router.get("/:id",(req,res)=>{
-    const id = parseInt(req.params.id);
-    const product = products.find(p => p.id ===id);
 
-    if(!product){
-       return res.status(404).json({
-            success: false,
-            message: 'Product not found'
-        });
-    };
-    res.status(200).json({
-    success: true,
-    data: product
-    });
-});
-// post products add products
-router.post("/",(req,res)=>{
-    const {name,price,stock}= req.body;
+// add product
+router.post('/', async(req,res,next)=>{
+    try {
+        const {name,price,stock}=req.body;
 
-    // validation
-    if(!name || !price || !stock){
+        if(!name ||!price ||!stock === undefined){
         return res.status(400).json({
             success:false,
-            message: 'name,price and stock not found'
+            message: 'name,price,stock must be given'
         });
-    }
-    // add new
-    const newProduct={
-        id: products.length +1,
-        name,price,stock
-    };
-    // push product into arr
-    products.push(newProduct);
+        };
 
-    res.status(201).json({
-        success: false,
-        message:"products added",
-        data: newProduct
-    });
+        if(price <0 || stock <0){
+            return res.status(400).json({
+                success: false,
+                message: 'price and stock must be positive'
+            });
+        };
+        const [result]= await pool.query(
+            'INSERT INTO products (name.price,stock) VALUES(?,?,?)',
+            [name,price,stock]
+        );
+        res.status(200).json({
+            success:true,
+            message:'product added',
+            data: {id:result.insertId,name,price,stock}
+        });
+    } catch (error) {
+        next(error);
+    }
 });
-// product update
-router.put("/:id",(req,res)=>{
-    const id= parseInt(req.params.id);
-    const  {name,price,stock}= req.body;
-    const index = products.findIndex(p => p.id ===id);
 
-    if(index ==-1){
-        return res.status(404).json({
-            success: false,
-            message: "product not found"
-        });
-    }
-    // validation
-    if(!name ||!price ||!stock){
-        return res.status(400).json({
-            success: false,
-            message:'name,price,stock have to be added'
-        });
-    }
-    products[index]={id,name,price,stock};
+// update all product
+router.put('/:id',findProduct, async(req,res,next)=>{
+    try {
+        const {name,price,stock}=req.body;
 
-    res.status(200).json({
+        if(!name||!price||!stock === undefined){
+            return res.status(400).json({
+                success:false,
+                message: ' name,price,stock must be given'
+            });
+        };
+        await pool.query(
+            'UPDATE products SET name=?,price=?,stock=? WHERE id=?',
+            [name,price,stock]
+        );
+        res.status(200).json({
+            success: true,
+            message: 'updated succcessfully',
+            data: {id: req.product,name,price,stock}
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+// partial update
+router.patch('/:id',findProduct, async(req,res,next)=>{
+    try {
+        const updates = req.body;
+        const allowed = ['name','price','stock'];
+
+        // just take selected part
+        const fields = Object.keys(updates).filter(k=> allowed.includes(k)) 
+
+        if(fields.length===0){
+            return res.status(400).json({
+                success:false,
+                message:'only select those name,price,stock'
+            });
+        };
+
+        // dynamic query
+        const setClause = fields.map(f=> `${f} = ?`).join(', ');
+        const Values= fields.map(f=> updates[f])
+        Values.push(req.product.id);
+
+        await pool.query(
+            `UPDATE products SET ${setClause} WHERE id = ?`,
+            Values
+        )
+        res.status(200).json({
         success: true,
-    message: 'Product updated',
-    data: products[index]
+        message: 'Product partialy updated',
+        data: { ...req.product, ...updates }
     });
-});
-// use of patch / partially update
-router.patch('/:id',(req,res)=>{
-    const id = parseInt(req.params.id);
-    const index = products.findIndex(p => p.id===id);
 
-    // validation
-    if(index === -1){
-        return res.status(404).json({
-            success:false,
-            message:'product not found'
-        });
+    } catch (error) {
+        next(error);
     }
-    // parially update logic
-    products[index]={...products[index],...updates};
-
-    res.status(200).json({
-        success:true,
-        message:"product partially updated",
-        data: products[index]
-    });
 });
-// delete product
-router.delete('/:id',(req,res)=>{
-    const id = parseInt(req.params.body);
-    const index = products.findIndex(p=> p.id===id);
 
-    if(index===-1){
-        return res.status(404).json({
-            success: false,
-            message: 'Product not found'
+// delete products
+router.delete('/:id',findProduct, async(req,res,next)=>{
+    try {
+        await pool.query(
+            "DELETE FROM products WHERE id=?",
+            [req.params.id]
+        )
+        res.status(200).json({
+            success:true,
+            message:'product deleted'
         });
+    } catch (error) {
+        next(error);
     }
-    products.splice(index,1);
-
-    res.status(200).json({
-    success: true,
-    message: 'Product delete হয়েছে'
-    });
 });
 
 export default router;
