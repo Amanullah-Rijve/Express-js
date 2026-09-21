@@ -1,0 +1,21 @@
+route.delete('/:id', findBook,async(req,res,next)=>{
+try{
+const id = req.params.id;
+
+const delBook= await Book.findByIdAndDelete(id);
+
+if(!delBook){
+return res.status(404).json({
+success: false,
+message: 'unable to delete book'
+})
+}
+
+res.status(200).json({
+success: true,
+message: 'book deleted'
+})
+}catch(error){
+next(error);
+}
+})
