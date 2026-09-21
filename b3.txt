@@ -1,0 +1,38 @@
+router.put('/:id', findbook, async(req,res,next)=>{
+
+try{
+
+const id = req.params.id;
+const {title,author,quantity} = req.body;
+
+if(!title || !author || !quantity){
+return res.status(400).json({
+success: false,
+message: 'title, author, quantity required'
+});
+}
+
+const book = await Book.findById(id);
+if(!book){
+return res.status(404).json({
+success: false,
+message: 'book not found'
+})
+}
+
+const update = await Book.findByIdAndUpdate(
+id,
+{title,author,quantity},{new: true}
+);
+
+res.status(200).json({
+success: true,
+message: 'book updated',
+data: update
+})
+
+
+}catch(error){
+next(error);
+}
+})
