@@ -1,0 +1,17 @@
+const findBook = async (req,res,next)=>{
+try{
+const id= req.params.id;
+const book = await Book.findById(id);
+
+if(!book){
+return res.status(404).json({
+success: false,
+message: 'book not found'
+});
+}
+req.book = book;
+next();
+}catch(error){
+next(error);
+}
+}

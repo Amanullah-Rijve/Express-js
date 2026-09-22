@@ -1,0 +1,38 @@
+router.post('/register', async (req,res,next)=>{
+try{
+const {name,email,password} = req.body;
+
+if(!name||!email||!password){
+return res.status(400).json({
+success: false,
+message: 'name,email,password required'
+});
+};
+
+const userCheck = await User.findOne({email});
+if(userCheck){
+return res.status(409).json({
+success: false,
+message: 'user Already exsist'
+});
+};
+
+const salt = await bcrypt.genSalt(10);
+const hasheedPass = await bcrypt.hash(password,salt);
+
+const newUser = await User.create({name,email,password:hasheedPass })
+
+res.status(201).json({
+success: true,
+message: 'new user created',
+data: {
+id: newUser._id,
+name: newUser.name,
+email: newUser.email
+},
+});
+
+}catch(error){
+next(error)
+}
+})

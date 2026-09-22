@@ -1,0 +1,27 @@
+const UserSchema = new mongoose.Schema(
+{
+name:{
+type: String,
+required: [true,'name required'],
+trim: true
+},
+email:{
+type: String,
+required: [true,'email required'],
+unique: true,
+trim: true
+},
+password:{
+type: String,
+required: [true,'password required'],
+minLength: 8,
+select: false
+},
+},
+{
+timestamps: true,
+}
+);
+
+const User = mongoose.model('User',UserSchema );
+
