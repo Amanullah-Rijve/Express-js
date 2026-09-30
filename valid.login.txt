@@ -1,0 +1,42 @@
+router.post('/login', 
+[
+body('email').isEmail().withMessage('give correct email'),
+body('password').notEmpty().withMessage('give correct password')
+],
+async(req,res,next)=>{
+try{
+const errors = validationResult(req)
+if(!errors.isEmpty()){
+return res.status(401).json({success: false, message:'unauthorized user'})
+}
+
+const {email,password} = req.body
+
+const isUser = await User.findOne({email}).select('+password')
+if(!isUser){
+return res.status(400).json({success: false,message:'user dont exsist'})
+}
+
+const isMatch = await isUser.comparePassword(password)
+if(!isMatch){
+return res.status(400).json({success: false,message: 'wrond password'})
+}
+
+const token = generateToken(isUser.id)
+
+res.status(200).json({
+success: true,
+message: 'login successful',
+token: token,
+user:{
+id: isUser.id,
+name: isUser.name,
+email: isUser.email
+}
+})
+
+}catch(error){
+next(error)
+}
+
+})
